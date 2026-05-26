@@ -6,30 +6,67 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const particles = [];
-canvas.addEventListener("click", (e) => {
+let renderedStars = []; // Store star positions for collision detection
+
+function createSandAnimation(x, y) {
     for (let i = 0; i < 50; i++) {
         particles.push({
-            x: e.clientX,
-            y: e.clientY,
+            x: x,
+            y: y,
             vx: (Math.random() - 0.5) * 2,
-            vy: Math.random() * 2
+            vy: Math.random() * 2,
+            clr: getRandomColor()
         });
+    }
+}
+
+canvas.addEventListener("click", (e) => {
+    let hitStar = false;
+    
+    // Check if click hits any star
+    for (let star of renderedStars) {
+        const dx = e.clientX - star.x;
+        const dy = e.clientY - star.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < star.radius + 5) { // +5 for easier clicking
+            createSandAnimation(e.clientX, e.clientY);
+            hitStar = true;
+            break;
+        }
+    }
+    
+    // If no star hit, still create animation at click point
+    if (!hitStar) {
+        createSandAnimation(e.clientX, e.clientY);
     }
 });
 function animate() {
-    ctx.fillStyle = "rgba(2,6,23,0.2)";
+    renderedStars = []; // Clear previous frame's star positions
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.translate(centerX, centerY);
+
+    for (let i = 0; i < stars.length; i++) {
+        let star = stars[i];
+        star.drawStar();
+    }
+
+    ctx.translate(-centerX, -centerY);
+
+    // Draw particles on top
     particles.forEach(p => {
         p.vy += 0.1;
         p.x += p.vx;
         p.y += p.vy;
-        ctx.fillStyle = "#facc15";
+        ctx.fillStyle = p.clr;
         ctx.fillRect(p.x, p.y, 3, 3);
-
     });
+
     requestAnimationFrame(animate);
 }
-animate();
 
 let numberOfStars = 5000;
 
@@ -67,6 +104,13 @@ class Star {
         let starY = remap(yRatio, 0, 1, 0, canvas.height);
         this.radius = remap(this.counter, 0, canvas.width, this.radiusMax, 0);
 
+        // Store rendered position for collision detection
+        renderedStars.push({
+            x: starX,
+            y: starY,
+            radius: this.radius
+        });
+
         ctx.beginPath();
 
         ctx.arc(starX, starY, this.radius, 0, Math.PI * 2, false);
@@ -91,23 +135,16 @@ function setup() {
     }
 }
 setup();
+animate();
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+let resizeTimer;
+window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        location.reload();
+    }, 150);
+});
 
-    ctx.translate(centerX, centerY);
-
-    for (let i = 0; i < stars.length; i++) {
-        let star = stars[i];
-        star.drawStar();
-    }
-
-    ctx.translate(-centerX, -centerY);
-    requestAnimationFrame(draw);
-}
-draw();
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
